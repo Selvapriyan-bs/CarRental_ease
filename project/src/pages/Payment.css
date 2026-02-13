@@ -1,0 +1,258 @@
+.payment-container {
+  min-height: calc(100vh - 60px);
+  background: #f5f5f5;
+  padding: 2rem;
+}
+
+.payment-content {
+  max-width: 800px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.vehicle-summary {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  height: fit-content;
+}
+
+.vehicle-summary img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.vehicle-info h2 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+}
+
+.vehicle-info p {
+  margin: 0.25rem 0;
+  color: #666;
+}
+
+.vehicle-info .price {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #3498db;
+}
+
+.payment-form {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.payment-form h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.booking-summary {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  border-left: 4px solid #3498db;
+}
+
+.booking-summary p {
+  margin: 0.5rem 0;
+}
+
+.booking-summary .total {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.payment-info {
+  text-align: center;
+  margin: 1rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.payment-info p {
+  margin: 0.25rem 0;
+}
+
+.btn-pay {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #3395ff, #1976d2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-pay:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.btn-pay:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.payment-methods {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.payment-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+}
+
+.payment-option:hover {
+  border-color: #3498db;
+  background: #f8f9fa;
+}
+
+.payment-option.active {
+  border-color: #3498db;
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.payment-option span {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.upi-section {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.upi-apps {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.upi-apps p {
+  margin-bottom: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.upi-icons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.upi-icons span {
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  border: 1px solid #e1e8ed;
+  color: #666;
+}
+
+.qr-section {
+  background: #f8f9fa;
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.qr-info {
+  text-align: center;
+  color: #666;
+}
+
+.qr-info svg {
+  color: #3498db;
+  margin-bottom: 1rem;
+}
+
+.qr-info p {
+  margin: 0.5rem 0;
+}
+
+.qr-note {
+  font-size: 0.85rem;
+  color: #999 !important;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .payment-methods {
+    grid-template-columns: 1fr;
+  }
+  
+  .upi-icons {
+    gap: 0.5rem;
+  }
+  
+  .upi-icons span {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+  }
+}

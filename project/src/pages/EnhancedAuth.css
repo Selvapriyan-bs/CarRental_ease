@@ -1,0 +1,161 @@
+.auth-container {
+  min-height: calc(100vh - 60px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+}
+
+.auth-form {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-form.enhanced {
+  max-width: 450px;
+  padding: 2.5rem;
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.form-header svg {
+  color: #3498db;
+  margin-bottom: 1rem;
+}
+
+.form-header h2 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 1.8rem;
+}
+
+.form-header p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.form-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  padding: 0.75rem;
+  transition: border-color 0.3s;
+}
+
+.form-group:focus-within {
+  border-color: #3498db;
+}
+
+.form-group svg {
+  color: #666;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.form-group input,
+.form-group select {
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  flex: 1;
+  background: transparent;
+}
+
+.form-group input::placeholder {
+  color: #999;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 1.5rem;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.error {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.form-footer {
+  text-align: center;
+  padding-top: 1rem;
+  border-top: 1px solid #e1e8ed;
+}
+
+.form-footer p {
+  margin: 0;
+  color: #666;
+}
+
+.form-footer a {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.form-footer a:hover {
+  text-decoration: underline;
+}
+
+.demo-credentials {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  border-left: 4px solid #3498db;
+}
+
+.demo-credentials p {
+  margin: 0.5rem 0;
+  text-align: left;
+}
+
+.demo-credentials strong {
+  color: #2c3e50;
+}
+
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 1rem;
+  }
+  
+  .auth-form.enhanced {
+    padding: 2rem;
+  }
+}
