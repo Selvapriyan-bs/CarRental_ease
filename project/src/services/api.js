@@ -1,58 +1,42 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_URL}/api`,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token && !config.headers.Authorization) {
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-export const authAPI = {
-  register: (userData) => api.post('/register', userData),
-  login: (credentials) => api.post('/login', credentials),
-  sendVerification: (email) => api.post('/send-verification', { email }),
-  verifyEmail: (email, code) => api.post('/verify-email', { email, code }),
-};
-
 export const vehicleAPI = {
   getAll: () => api.get('/vehicles'),
-  create: (vehicleData) => {
-    const token = localStorage.getItem('token');
-    return api.post('/vehicles', vehicleData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-  },
-  update: (id, vehicleData) => {
-    const token = localStorage.getItem('token');
-    return api.put(`/vehicles/${id}`, vehicleData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-  },
-  delete: (id) => api.delete(`/vehicles/${id}`),
+  getById: (id) => api.get(`/vehicles/${id}`),
+  create: (data) => api.post('/vehicles', data),
+  update: (id, data) => api.put(`/vehicles/${id}`, data),
+  delete: (id) => api.delete(`/vehicles/${id}`)
 };
 
 export const bookingAPI = {
-  getAll: () => {
-    const token = localStorage.getItem('token');
-    return api.get('/bookings', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-  },
-  create: (bookingData) => api.post('/bookings', bookingData),
-  update: (id, data) => api.put(`/bookings/${id}`, data),
+  getAll: () => api.get('/bookings'),
+  create: (data) => api.post('/bookings', data),
+  update: (id, data) => api.put(`/bookings/${id}`, data)
+};
+
+export const authAPI = {
+  register: (data) => api.post('/register', data),
+  login: (data) => api.post('/login', data),
+  sendVerification: (data) => api.post('/send-verification', data),
+  verifyEmail: (data) => api.post('/verify-email', data)
 };
 
 export default api;
+export { API_URL };

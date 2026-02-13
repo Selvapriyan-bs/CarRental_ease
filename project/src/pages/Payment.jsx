@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { vehicleAPI, bookingAPI } from '../services/api';
+import { vehicleAPI, bookingAPI, API_URL } from '../services/api';
 import { Calendar03Icon, CreditCardIcon, UserIcon, QrCode01Icon, SmartPhone01Icon } from 'hugeicons-react';
 import './Payment.css';
 
@@ -74,7 +74,7 @@ const Payment = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/create-order', {
+      const response = await fetch(`${API_URL}/api/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +110,7 @@ const Payment = () => {
             }
             
             // Real payment verification
-            const verifyResponse = await fetch('http://localhost:5000/api/verify-payment', {
+            const verifyResponse = await fetch(`${API_URL}/api/verify-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
