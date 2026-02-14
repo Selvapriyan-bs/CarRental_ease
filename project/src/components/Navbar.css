@@ -23,6 +23,13 @@
   gap: 0.5rem;
 }
 
+.nav-logo-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .nav-menu {
   display: flex;
   list-style: none;

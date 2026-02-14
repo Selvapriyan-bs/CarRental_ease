@@ -59,13 +59,10 @@ const Login = () => {
         <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? 'Logging in...' : 'Login'}
         </button>
+        <p style={{textAlign: 'center', marginTop: '10px'}}>
+          <Link to="/forgot-password">Forgot Password?</Link>
+        </p>
         <p>Don't have an account? <Link to="/register">Register</Link></p>
-        <div className="demo-credentials">
-          <p><strong>Demo Credentials:</strong></p>
-          <p>User: user@test.com / user123</p>
-          <p>Vendor: vendor@test.com / vendor123</p>
-          <p>Admin: admin@test.com / admin123</p>
-        </div>
       </form>
     </div>
   );

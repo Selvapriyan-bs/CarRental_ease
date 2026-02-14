@@ -8,7 +8,35 @@ const path = require('path');
 const sharp = require('sharp');
 const fs = require('fs');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 require('dotenv').config();
+
+// Configure SendGrid
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+// Email transporter with multiple fallback options
+let transporter;
+try {
+  transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 5000,
+    greetingTimeout: 5000
+  });
+} catch (err) {
+  console.log('Email transporter setup failed:', err.message);
+}
 
 const app = express();
 
@@ -17,7 +45,12 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/carrental');
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/carrental')
+  .then(() => console.log('✓ MongoDB connected successfully'))
+  .catch(err => {
+    console.error('✗ MongoDB connection error:', err.message);
+    console.log('Please ensure MongoDB is running: mongod');
+  });
 
 // Multer configuration
 const storage = multer.diskStorage({
@@ -160,22 +193,80 @@ const auth = (req, res, next) => {
   }
 };
 
+// DB connection check middleware
+const checkDB = (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ message: 'Database not connected. Please ensure MongoDB is running.' });
+  }
+  next();
+};
+
 // Routes
-app.post('/api/send-verification', (req, res) => {
+app.post('/api/send-verification', async (req, res) => {
   const { email } = req.body;
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   
   global.verificationCodes = global.verificationCodes || {};
-  global.verificationCodes[email] = verificationCode;
+  global.verificationCodes[email] = { code: verificationCode, timestamp: Date.now() };
   
-  console.log(`Verification code for ${email}: ${verificationCode}`);
-  res.json({ message: 'Verification code sent', code: verificationCode });
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">Email Verification</h2>
+      <p>Your verification code is:</p>
+      <h1 style="background: #f4f4f4; padding: 20px; text-align: center; letter-spacing: 5px;">${verificationCode}</h1>
+      <p>This code will expire in 10 minutes.</p>
+      <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+    </div>
+  `;
+  
+  // Try SendGrid first
+  if (process.env.SENDGRID_API_KEY) {
+    try {
+      await sgMail.send({
+        to: email,
+        from: process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_USER,
+        subject: 'Email Verification Code - Car Rental',
+        html: htmlContent
+      });
+      console.log(`✓ Email sent via SendGrid to ${email}`);
+      return res.json({ message: 'Verification code sent to your email' });
+    } catch (error) {
+      console.log('SendGrid failed:', error.message);
+    }
+  }
+  
+  // Try Gmail as fallback
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Email Verification Code - Car Rental',
+      html: htmlContent
+    });
+    console.log(`✓ Email sent via Gmail to ${email}`);
+    return res.json({ message: 'Verification code sent to your email' });
+  } catch (error) {
+    console.log('Gmail failed:', error.message);
+    return res.status(500).json({ message: 'Failed to send email. Please check your email configuration.' });
+  }
 });
 
 app.post('/api/verify-email', (req, res) => {
   const { email, code } = req.body;
   
-  if (!global.verificationCodes || global.verificationCodes[email] !== code) {
+  if (!global.verificationCodes || !global.verificationCodes[email]) {
+    return res.status(400).json({ message: 'No verification code found' });
+  }
+  
+  const { code: storedCode, timestamp } = global.verificationCodes[email];
+  const isExpired = Date.now() - timestamp > 10 * 60 * 1000; // 10 minutes
+  
+  if (isExpired) {
+    delete global.verificationCodes[email];
+    return res.status(400).json({ message: 'Verification code expired' });
+  }
+  
+  if (storedCode !== code) {
     return res.status(400).json({ message: 'Invalid verification code' });
   }
   
@@ -183,7 +274,26 @@ app.post('/api/verify-email', (req, res) => {
   res.json({ message: 'Email verified successfully' });
 });
 
-app.post('/api/register', async (req, res) => {
+app.post('/api/reset-password', checkDB, async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+    
+    console.log(`✓ Password reset successful for: ${email}`);
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/register', checkDB, async (req, res) => {
   try {
     const { name, email, password, role, gstNumber } = req.body;
     
@@ -232,19 +342,29 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', checkDB, async (req, res) => {
   try {
     const { email, password } = req.body;
     
+    console.log(`Login attempt for: ${email}`);
+    
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!user) {
+      console.log(`User not found: ${email}`);
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!isMatch) {
+      console.log(`Invalid password for: ${email}`);
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
+    console.log(`✓ Login successful: ${email}`);
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'secret');
     res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: error.message });
   }
 });

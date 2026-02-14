@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Car01Icon, Home01Icon, Login01Icon, UserAdd01Icon, DashboardSquare01Icon, Logout01Icon, UserIcon } from 'hugeicons-react';
+import { Home01Icon, Login01Icon, UserAdd01Icon, DashboardSquare01Icon, Logout01Icon, UserIcon } from 'hugeicons-react';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -15,7 +15,10 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link to="/" className="nav-logo"><Car01Icon size={24} /> CarRental</Link>
+        <Link to="/" className="nav-logo">
+          <img src="/logo.png" alt="CarRental" className="nav-logo-img" />
+          CarRental
+        </Link>
         <ul className="nav-menu">
           <li><Link to="/home"><Home01Icon size={20} /> Home</Link></li>
           {user ? (
