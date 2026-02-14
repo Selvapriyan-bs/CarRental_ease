@@ -8,7 +8,6 @@ const path = require('path');
 const sharp = require('sharp');
 const fs = require('fs');
 const crypto = require('crypto');
-const Razorpay = require('razorpay');
 require('dotenv').config();
 
 const app = express();
@@ -16,16 +15,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
-
-// Initialize Razorpay only if keys are provided
-let razorpay = null;
-if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && 
-    process.env.RAZORPAY_KEY_ID !== 'rzp_test_your_actual_key_id') {
-  razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-  });
-}
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/carrental');
@@ -343,63 +332,32 @@ app.delete('/api/vehicles/:id', auth, async (req, res) => {
   }
 });
 
-app.post('/api/verify-payment', auth, async (req, res) => {
-  try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    
-    const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
-    hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
-    const generated_signature = hmac.digest('hex');
-    
-    if (generated_signature === razorpay_signature) {
-      res.json({ success: true, paymentId: razorpay_payment_id });
-    } else {
-      res.status(400).json({ success: false, message: 'Invalid signature' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
 app.post('/api/create-order', auth, async (req, res) => {
   try {
     const { amount } = req.body;
     
-    // Check if Razorpay keys are configured
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET || 
-        process.env.RAZORPAY_KEY_ID === 'rzp_test_your_actual_key_id') {
-      // Mock order for testing
-      const mockOrder = {
-        id: `order_${Date.now()}`,
-        amount: amount * 100,
-        currency: 'INR'
-      };
-      return res.json({ 
-        orderId: mockOrder.id, 
-        amount: mockOrder.amount,
-        currency: mockOrder.currency,
-        key: 'rzp_test_mock_key'
-      });
-    }
-    
-    // Real Razorpay order creation
-    const options = {
-      amount: amount * 100, // amount in paise
-      currency: 'INR',
-      receipt: `receipt_${Date.now()}`,
-      payment_capture: 1
+    const mockOrder = {
+      id: `order_${Date.now()}`,
+      amount: amount * 100,
+      currency: 'INR'
     };
     
-    const order = await razorpay.orders.create(options);
-    
     res.json({ 
-      orderId: order.id, 
-      amount: order.amount,
-      currency: order.currency,
-      key: process.env.RAZORPAY_KEY_ID
+      orderId: mockOrder.id, 
+      amount: mockOrder.amount,
+      currency: mockOrder.currency,
+      key: 'rzp_test_mock_key'
     });
   } catch (error) {
     console.error('Order creation error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/verify-payment', auth, async (req, res) => {
+  try {
+    res.json({ success: true, paymentId: `pay_${Date.now()}` });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
