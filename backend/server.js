@@ -53,17 +53,12 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/carrental')
   });
 
 // Multer configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, 'temp_' + Date.now() + path.extname(file.originalname));
-  }
-});
+// Use memory storage for Vercel (filesystem is read-only)
+const storage = multer.memoryStorage();
 
 const upload = multer({ 
   storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -73,7 +68,7 @@ const upload = multer({
   }
 });
 
-// Image resize middleware
+// Image resize middleware - convert to base64 for Vercel
 const resizeImages = async (req, res, next) => {
   if (!req.files || req.files.length === 0) {
     return next();
@@ -83,21 +78,17 @@ const resizeImages = async (req, res, next) => {
     req.resizedFiles = [];
     
     for (const file of req.files) {
-      const resizedFilename = file.filename.replace('temp_', 'resized_');
-      const outputPath = path.join('uploads', resizedFilename);
-      
-      await sharp(file.path)
+      const resizedBuffer = await sharp(file.buffer)
         .resize(1500, 1024, {
           fit: 'cover',
           position: 'center'
         })
         .jpeg({ quality: 90 })
-        .toFile(outputPath);
+        .toBuffer();
       
-      // Delete temp file
-      fs.unlinkSync(file.path);
-      
-      req.resizedFiles.push(`/uploads/${resizedFilename}`);
+      // Convert to base64 data URL
+      const base64Image = `data:image/jpeg;base64,${resizedBuffer.toString('base64')}`;
+      req.resizedFiles.push(base64Image);
     }
     
     next();
@@ -201,13 +192,69 @@ const checkDB = (req, res, next) => {
   next();
 };
 
+// Verification Code Schema for persistence
+const verificationSchema = new mongoose.Schema({
+  email: { type: String, required: true },
+  code: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now, expires: 600 } // Auto-delete after 10 min
+});
+const Verification = mongoose.model('Verification', verificationSchema);
+
 // Routes
+// Alias for backward compatibility
+app.post('/send-verification', async (req, res) => {
+  const { email } = req.body;
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  await Verification.findOneAndDelete({ email });
+  await Verification.create({ email, code: verificationCode });
+  
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">Email Verification</h2>
+      <p>Your verification code is:</p>
+      <h1 style="background: #f4f4f4; padding: 20px; text-align: center; letter-spacing: 5px;">${verificationCode}</h1>
+      <p>This code will expire in 10 minutes.</p>
+      <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+    </div>
+  `;
+  
+  if (process.env.SENDGRID_API_KEY) {
+    try {
+      await sgMail.send({
+        to: email,
+        from: process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_USER,
+        subject: 'Email Verification Code - Car Rental',
+        html: htmlContent
+      });
+      console.log(`✓ Email sent via SendGrid to ${email}`);
+      return res.json({ message: 'Verification code sent to your email' });
+    } catch (error) {
+      console.log('SendGrid failed:', error.message);
+    }
+  }
+  
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Email Verification Code - Car Rental',
+      html: htmlContent
+    });
+    console.log(`✓ Email sent via Gmail to ${email}`);
+    return res.json({ message: 'Verification code sent to your email' });
+  } catch (error) {
+    console.log('Gmail failed:', error.message);
+    return res.status(500).json({ message: 'Failed to send email. Please check your email configuration.' });
+  }
+});
+
 app.post('/api/send-verification', async (req, res) => {
   const { email } = req.body;
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   
-  global.verificationCodes = global.verificationCodes || {};
-  global.verificationCodes[email] = { code: verificationCode, timestamp: Date.now() };
+  await Verification.findOneAndDelete({ email });
+  await Verification.create({ email, code: verificationCode });
   
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
@@ -251,26 +298,19 @@ app.post('/api/send-verification', async (req, res) => {
   }
 });
 
-app.post('/api/verify-email', (req, res) => {
+app.post('/api/verify-email', async (req, res) => {
   const { email, code } = req.body;
   
-  if (!global.verificationCodes || !global.verificationCodes[email]) {
-    return res.status(400).json({ message: 'No verification code found' });
+  const verification = await Verification.findOne({ email });
+  if (!verification) {
+    return res.status(400).json({ message: 'No verification code found or expired' });
   }
   
-  const { code: storedCode, timestamp } = global.verificationCodes[email];
-  const isExpired = Date.now() - timestamp > 10 * 60 * 1000; // 10 minutes
-  
-  if (isExpired) {
-    delete global.verificationCodes[email];
-    return res.status(400).json({ message: 'Verification code expired' });
-  }
-  
-  if (storedCode !== code) {
+  if (verification.code !== code) {
     return res.status(400).json({ message: 'Invalid verification code' });
   }
   
-  delete global.verificationCodes[email];
+  await Verification.findOneAndDelete({ email });
   res.json({ message: 'Email verified successfully' });
 });
 
