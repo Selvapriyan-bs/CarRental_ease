@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { bookingAPI, vehicleAPI } from '../services/api';
+import { bookingAPI, vehicleAPI, BACKEND_URL } from '../services/api';
 import { BookmarkCheck01Icon, HourglassIcon, Calendar03Icon, DollarCircleIcon } from 'hugeicons-react';
 import './Dashboard.css';
 
@@ -72,7 +72,7 @@ const UserDashboard = () => {
                     <td>
                       <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                         {vehicle?.images && vehicle.images[0] && (
-                          <img src={`http://localhost:5000${vehicle.images[0]}`} alt={vehicle.name} style={{width: '40px', height: '25px', objectFit: 'cover', borderRadius: '4px'}} />
+                          <img src={`${BACKEND_URL}${vehicle.images[0]}`} alt={vehicle.name} style={{width: '40px', height: '25px', objectFit: 'cover', borderRadius: '4px'}} />
                         )}
                         {vehicle?.name}
                       </div>

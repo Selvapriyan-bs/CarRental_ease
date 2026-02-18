@@ -1,7 +1,5 @@
 import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api' || 'https://carrental-27s0.onrender.com/api';
-const BASE_URL = API_URL.replace('/api', '');
+import { API_URL, BACKEND_URL } from '../config';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -58,4 +56,4 @@ export const bookingAPI = {
 };
 
 export default api;
-export { BASE_URL };
+export { BACKEND_URL };

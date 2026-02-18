@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { vehicleAPI, bookingAPI, BASE_URL } from '../services/api';
+import { vehicleAPI, bookingAPI, BACKEND_URL } from '../services/api';
 import { Car01Icon, BookmarkCheck01Icon, DollarCircleIcon, Add01Icon, CheckmarkCircle02Icon, CancelCircleIcon, Edit02Icon } from 'hugeicons-react';
 import LocationPicker from './LocationPicker';
 import { states, getCitiesByState } from '../data/indianLocations';
@@ -106,7 +106,7 @@ const VendorDashboard = () => {
       });
       newVehicle.images.forEach(image => formData.append('images', image));
       const token = localStorage.getItem('token');
-      const url = editingVehicle ? `${BASE_URL}/api/vehicles/${editingVehicle._id}` : `${BASE_URL}/api/vehicles`;
+      const url = editingVehicle ? `${BACKEND_URL}/api/vehicles/${editingVehicle._id}` : `${BACKEND_URL}/api/vehicles`;
       const method = editingVehicle ? 'PUT' : 'POST';
       const response = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}` }, body: formData });
       if (response.ok) {
@@ -287,7 +287,7 @@ const VendorDashboard = () => {
                             <div className="image-preview-grid">
                               {imagePreview.map((preview, index) => (
                                 <div key={index} className="image-preview-item">
-                                  <img src={typeof preview === 'string' && preview.startsWith('/uploads') ? `${BASE_URL}${preview}` : preview} alt={`Preview ${index + 1}`} />
+                                  <img src={typeof preview === 'string' && preview.startsWith('/uploads') ? `${BACKEND_URL}${preview}` : preview} alt={`Preview ${index + 1}`} />
                                   <button type="button" onClick={() => removeImage(index)} className="remove-image">×</button>
                                 </div>
                               ))}
@@ -304,7 +304,7 @@ const VendorDashboard = () => {
                     <div className="vehicle-row">
                       <div className="vehicle-info">
                         <div className="vehicle-gallery">
-                          <img src={`${BASE_URL}${v.images && v.images[0] ? v.images[0] : '/uploads/default.jpg'}`} alt={v.name} className="vehicle-thumb" />
+                          <img src={`${BACKEND_URL}${v.images && v.images[0] ? v.images[0] : '/uploads/default.jpg'}`} alt={v.name} className="vehicle-thumb" />
                           {v.images && v.images.length > 1 && <span className="image-count">+{v.images.length - 1}</span>}
                         </div>
                         <div>
