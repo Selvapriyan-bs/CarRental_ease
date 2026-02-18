@@ -190,7 +190,8 @@ const auth = (req, res, next) => {
 // DB connection check middleware
 const checkDB = (req, res, next) => {
   if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ message: 'Database not connected. Please ensure MongoDB is running.' });
+    console.error('⚠️ Database not connected. Attempting to reconnect...');
+    return res.status(503).json({ message: 'Database not connected. Please try again.' });
   }
   next();
 };
@@ -228,9 +229,25 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Debug route - check if user exists (REMOVE IN PRODUCTION)
+app.get('/api/debug/user/:email', async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.params.email }).select('name email role createdAt');
+    if (!user) {
+      return res.json({ exists: false, message: 'User not found' });
+    }
+    res.json({ exists: true, user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Routes
 app.post('/send-verification', async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database not connected' });
+    }
     const { email } = req.body;
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     
@@ -301,6 +318,9 @@ app.post('/send-verification', async (req, res) => {
 
 app.post('/api/send-verification', async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database not connected' });
+    }
     const { email } = req.body;
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     
@@ -389,14 +409,26 @@ app.post('/api/reset-password', checkDB, async (req, res) => {
   try {
     const { email, newPassword } = req.body;
     
+    console.log(`Password reset attempt for: ${email}`);
+    
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      console.log(`User not found: ${email}`);
+      return res.status(404).json({ message: 'User not found' });
+    }
     
     const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log(`Old password hash: ${user.password.substring(0, 20)}...`);
+    console.log(`New password hash: ${hashedPassword.substring(0, 20)}...`);
+    
     user.password = hashedPassword;
     await user.save();
     
+    // Verify the save
+    const updatedUser = await User.findOne({ email });
+    console.log(`Saved password hash: ${updatedUser.password.substring(0, 20)}...`);
     console.log(`✓ Password reset successful for: ${email}`);
+    
     res.json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('Password reset error:', error);
