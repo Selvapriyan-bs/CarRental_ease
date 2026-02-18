@@ -58,6 +58,15 @@
   padding: 0.75rem;
   border-radius: 4px;
   margin-bottom: 1rem;
+  text-align: center;
+  font-weight: 600;
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
 }
 
 .auth-form p {

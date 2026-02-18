@@ -52,13 +52,19 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/carrental')
     console.log('Please ensure MongoDB is running: mongod');
   });
 
-// Multer configuration
-// Use memory storage for Vercel (filesystem is read-only)
-const storage = multer.memoryStorage();
+// Multer configuration for local filesystem
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -68,7 +74,6 @@ const upload = multer({
   }
 });
 
-// Image resize middleware - convert to base64 for Vercel
 const resizeImages = async (req, res, next) => {
   if (!req.files || req.files.length === 0) {
     return next();
@@ -78,17 +83,15 @@ const resizeImages = async (req, res, next) => {
     req.resizedFiles = [];
     
     for (const file of req.files) {
-      const resizedBuffer = await sharp(file.buffer)
-        .resize(1500, 1024, {
-          fit: 'cover',
-          position: 'center'
-        })
-        .jpeg({ quality: 90 })
-        .toBuffer();
+      const resizedPath = file.path.replace(path.extname(file.path), '_resized.jpg');
       
-      // Convert to base64 data URL
-      const base64Image = `data:image/jpeg;base64,${resizedBuffer.toString('base64')}`;
-      req.resizedFiles.push(base64Image);
+      await sharp(file.path)
+        .resize(1500, 1024, { fit: 'cover', position: 'center' })
+        .jpeg({ quality: 90 })
+        .toFile(resizedPath);
+      
+      fs.unlinkSync(file.path);
+      req.resizedFiles.push(`/uploads/${path.basename(resizedPath)}`);
     }
     
     next();
@@ -201,100 +204,143 @@ const verificationSchema = new mongoose.Schema({
 const Verification = mongoose.model('Verification', verificationSchema);
 
 // Routes
-// Alias for backward compatibility
 app.post('/send-verification', async (req, res) => {
-  const { email } = req.body;
-  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  await Verification.findOneAndDelete({ email });
-  await Verification.create({ email, code: verificationCode });
-  
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #333;">Email Verification</h2>
-      <p>Your verification code is:</p>
-      <h1 style="background: #f4f4f4; padding: 20px; text-align: center; letter-spacing: 5px;">${verificationCode}</h1>
-      <p>This code will expire in 10 minutes.</p>
-      <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
-    </div>
-  `;
-  
-  if (process.env.SENDGRID_API_KEY) {
-    try {
-      await sgMail.send({
-        to: email,
-        from: process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_USER,
-        subject: 'Email Verification Code - Car Rental',
-        html: htmlContent
-      });
-      console.log(`✓ Email sent via SendGrid to ${email}`);
-      return res.json({ message: 'Verification code sent to your email' });
-    } catch (error) {
-      console.log('SendGrid failed:', error.message);
-    }
-  }
-  
   try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Email Verification Code - Car Rental',
-      html: htmlContent
-    });
-    console.log(`✓ Email sent via Gmail to ${email}`);
+    const { email } = req.body;
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    try {
+      await Verification.findOneAndDelete({ email });
+      await Verification.create({ email, code: verificationCode });
+    } catch (dbError) {
+      console.error('DB error:', dbError.message);
+      return res.status(503).json({ message: 'Database error. Please try again.' });
+    }
+    
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Email Verification</h2>
+        <p>Your verification code is:</p>
+        <h1 style="background: #f4f4f4; padding: 20px; text-align: center; letter-spacing: 5px;">${verificationCode}</h1>
+        <p>This code will expire in 10 minutes.</p>
+        <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+      </div>
+    `;
+    
+    let emailSent = false;
+    
+    if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY !== 'your_sendgrid_api_key_here') {
+      try {
+        await sgMail.send({
+          to: email,
+          from: process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_USER,
+          subject: 'Email Verification Code - Car Rental',
+          html: htmlContent
+        });
+        console.log(`✓ Email sent via SendGrid to ${email}`);
+        emailSent = true;
+      } catch (error) {
+        console.log('SendGrid failed:', error.message);
+      }
+    }
+    
+    if (!emailSent && transporter) {
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: 'Email Verification Code - Car Rental',
+          html: htmlContent
+        });
+        console.log(`✓ Email sent via Gmail to ${email}`);
+        emailSent = true;
+      } catch (error) {
+        console.log('Gmail failed:', error.message);
+      }
+    }
+    
+    if (!emailSent) {
+      console.log(`⚠ Email not sent, but code saved: ${verificationCode}`);
+      return res.json({ 
+        message: 'Verification code generated. Email service unavailable - check console for code.',
+        code: verificationCode // ONLY for development/testing
+      });
+    }
+    
     return res.json({ message: 'Verification code sent to your email' });
   } catch (error) {
-    console.log('Gmail failed:', error.message);
-    return res.status(500).json({ message: 'Failed to send email. Please check your email configuration.' });
+    console.error('Send verification error:', error);
+    return res.status(500).json({ message: error.message });
   }
 });
 
 app.post('/api/send-verification', async (req, res) => {
-  const { email } = req.body;
-  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  await Verification.findOneAndDelete({ email });
-  await Verification.create({ email, code: verificationCode });
-  
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #333;">Email Verification</h2>
-      <p>Your verification code is:</p>
-      <h1 style="background: #f4f4f4; padding: 20px; text-align: center; letter-spacing: 5px;">${verificationCode}</h1>
-      <p>This code will expire in 10 minutes.</p>
-      <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
-    </div>
-  `;
-  
-  // Try SendGrid first
-  if (process.env.SENDGRID_API_KEY) {
-    try {
-      await sgMail.send({
-        to: email,
-        from: process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_USER,
-        subject: 'Email Verification Code - Car Rental',
-        html: htmlContent
-      });
-      console.log(`✓ Email sent via SendGrid to ${email}`);
-      return res.json({ message: 'Verification code sent to your email' });
-    } catch (error) {
-      console.log('SendGrid failed:', error.message);
-    }
-  }
-  
-  // Try Gmail as fallback
   try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Email Verification Code - Car Rental',
-      html: htmlContent
-    });
-    console.log(`✓ Email sent via Gmail to ${email}`);
+    const { email } = req.body;
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    try {
+      await Verification.findOneAndDelete({ email });
+      await Verification.create({ email, code: verificationCode });
+    } catch (dbError) {
+      console.error('DB error:', dbError.message);
+      return res.status(503).json({ message: 'Database error. Please try again.' });
+    }
+    
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Email Verification</h2>
+        <p>Your verification code is:</p>
+        <h1 style="background: #f4f4f4; padding: 20px; text-align: center; letter-spacing: 5px;">${verificationCode}</h1>
+        <p>This code will expire in 10 minutes.</p>
+        <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+      </div>
+    `;
+    
+    let emailSent = false;
+    
+    if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY !== 'your_sendgrid_api_key_here') {
+      try {
+        await sgMail.send({
+          to: email,
+          from: process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_USER,
+          subject: 'Email Verification Code - Car Rental',
+          html: htmlContent
+        });
+        console.log(`✓ Email sent via SendGrid to ${email}`);
+        emailSent = true;
+      } catch (error) {
+        console.log('SendGrid failed:', error.message);
+      }
+    }
+    
+    if (!emailSent && transporter) {
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: 'Email Verification Code - Car Rental',
+          html: htmlContent
+        });
+        console.log(`✓ Email sent via Gmail to ${email}`);
+        emailSent = true;
+      } catch (error) {
+        console.log('Gmail failed:', error.message);
+      }
+    }
+    
+    if (!emailSent) {
+      console.log(`⚠ Email not sent, but code saved: ${verificationCode}`);
+      return res.json({ 
+        message: 'Verification code generated. Email service unavailable - check console for code.',
+        code: verificationCode // ONLY for development/testing
+      });
+    }
+    
     return res.json({ message: 'Verification code sent to your email' });
   } catch (error) {
-    console.log('Gmail failed:', error.message);
-    return res.status(500).json({ message: 'Failed to send email. Please check your email configuration.' });
+    console.error('Send verification error:', error);
+    return res.status(500).json({ message: error.message });
   }
 });
 
@@ -391,13 +437,13 @@ app.post('/api/login', checkDB, async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       console.log(`User not found: ${email}`);
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Invalid email or password' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       console.log(`Invalid password for: ${email}`);
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Invalid email or password' });
     }
 
     console.log(`✓ Login successful: ${email}`);
@@ -636,4 +682,7 @@ app.put('/api/bookings/:id', auth, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});

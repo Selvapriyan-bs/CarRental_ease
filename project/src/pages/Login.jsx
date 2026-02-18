@@ -22,7 +22,6 @@ const Login = () => {
       localStorage.setItem('token', response.data.token);
       login(response.data.user);
       
-      // Check for redirect URL
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
       if (redirectUrl) {
         localStorage.removeItem('redirectAfterLogin');
@@ -31,7 +30,9 @@ const Login = () => {
         navigate('/dashboard');
       }
     } catch (error) {
-      setError(error.response?.data?.message || 'Login failed');
+      const errorMsg = error.response?.data?.message || 'Login failed. Please try again.';
+      setError(errorMsg);
+      setPassword('');
     } finally {
       setLoading(false);
     }
