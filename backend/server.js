@@ -203,6 +203,31 @@ const verificationSchema = new mongoose.Schema({
 });
 const Verification = mongoose.model('Verification', verificationSchema);
 
+// Health check route
+app.get('/', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head><title>Car Rental API</title></head>
+    <body style="font-family: Arial; padding: 40px; text-align: center;">
+      <h1>🚗 Car Rental API Server</h1>
+      <p>Status: <strong style="color: green;">Running</strong></p>
+      <p>Database: <strong>${mongoose.connection.readyState === 1 ? '✓ Connected' : '✗ Disconnected'}</strong></p>
+      <p>Time: ${new Date().toISOString()}</p>
+      <hr>
+      <p>API Endpoints: <code>/api/vehicles</code>, <code>/api/bookings</code>, <code>/api/users</code></p>
+    </body>
+    </html>
+  `);
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
+
 // Routes
 app.post('/send-verification', async (req, res) => {
   try {
