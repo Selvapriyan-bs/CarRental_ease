@@ -34,9 +34,10 @@ export const vehicleAPI = {
   },
   update: (id, vehicleData) => {
     const token = localStorage.getItem('token');
+    const isFormData = vehicleData instanceof FormData;
     return api.put(`/vehicles/${id}`, vehicleData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': isFormData ? 'multipart/form-data' : 'application/json',
         'Authorization': `Bearer ${token}`
       }
     });

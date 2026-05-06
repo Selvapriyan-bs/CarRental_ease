@@ -23,9 +23,15 @@ const VehicleDetail = () => {
 
   const fetchVehicle = async () => {
     try {
+      setLoading(true);
       const response = await vehicleAPI.getAll();
       const foundVehicle = response.data.find(v => v._id === id);
-      setVehicle(foundVehicle);
+      if (foundVehicle) {
+        console.log('Vehicle found:', foundVehicle);
+        setVehicle(foundVehicle);
+      } else {
+        console.error('Vehicle not found with id:', id);
+      }
     } catch (error) {
       console.error('Failed to fetch vehicle:', error);
     } finally {
@@ -33,8 +39,8 @@ const VehicleDetail = () => {
     }
   };
 
-  if (loading) return <div className="container">Loading...</div>;
-  if (!vehicle) return <div className="container">Vehicle not found</div>;
+  if (loading) return <div className="vehicle-detail"><div className="detail-container" style={{padding: '3rem', textAlign: 'center', fontSize: '1.2rem'}}>Loading vehicle details...</div></div>;
+  if (!vehicle) return <div className="vehicle-detail"><div className="detail-container" style={{padding: '3rem', textAlign: 'center', fontSize: '1.2rem', color: '#e74c3c'}}>Vehicle not found. Please check the vehicle ID.</div></div>;
 
   const handleBooking = () => {
     if (!user) {
@@ -81,7 +87,7 @@ const VehicleDetail = () => {
         </div>
       )}
       <div className="detail-container">
-        <div className="vehicle-gallery">
+        <div className="image-gallery">
           <div className="main-image">
             {vehicle.images && vehicle.images.length > 1 && (
               <>
@@ -100,68 +106,79 @@ const VehicleDetail = () => {
               style={{cursor: 'pointer'}}
             />
           </div>
-          {vehicle.images && vehicle.images.length > 1 && (
-            <div className="thumbnail-gallery">
-              {vehicle.images.map((img, index) => (
-                <img 
-                  key={index} 
-                  src={`http://localhost:5000${img}`} 
-                  alt={`${vehicle.name} ${index + 1}`}
-                  className={selectedImage === index ? 'active' : ''}
-                  onClick={() => setSelectedImage(index)}
-                />
-              ))}
-            </div>
-          )}
+          {/* Removed thumbnail-grid to avoid double image look */}
           
-          <div className="vehicle-highlights">
-            <h3>Key Features</h3>
-            <div className="highlights-grid">
-              <div className="highlight-item">
-                <Car01Icon size={24} />
-                <div>
-                  <strong>{vehicle.type}</strong>
-                  <p>Vehicle Type</p>
-                </div>
+          
+          <div className="specs-grid">
+            <div className="spec-box">
+              <Car01Icon size={24} />
+              <div className="spec-info">
+                <label>Vehicle Type</label>
+                <span>{vehicle.type}</span>
               </div>
-              <div className="highlight-item">
-                <UserIcon size={24} />
-                <div>
-                  <strong>{vehicle.seats} Seater</strong>
-                  <p>Capacity</p>
-                </div>
+            </div>
+            <div className="spec-box">
+              <UserIcon size={24} />
+              <div className="spec-info">
+                <label>Capacity</label>
+                <span>{vehicle.seats} Seater</span>
               </div>
-              <div className="highlight-item">
-                <Settings02Icon size={24} />
-                <div>
-                  <strong>{vehicle.transmission}</strong>
-                  <p>Transmission</p>
-                </div>
+            </div>
+            <div className="spec-box">
+              <Settings02Icon size={24} />
+              <div className="spec-info">
+                <label>Transmission</label>
+                <span>{vehicle.transmission}</span>
               </div>
-              <div className="highlight-item">
-                <FuelIcon size={24} />
-                <div>
-                  <strong>{vehicle.fuelType || 'Petrol'}</strong>
-                  <p>Fuel Type</p>
-                </div>
+            </div>
+            <div className="spec-box">
+              <FuelIcon size={24} />
+              <div className="spec-info">
+                <label>Fuel Type</label>
+                <span>{vehicle.fuelType || 'Petrol'}</span>
               </div>
             </div>
           </div>
         </div>
         
-        <div className="detail-info">
-          <div className="vehicle-header">
+        <div className="info-content">
+          <div className="info-header">
             <h1>{vehicle.name}</h1>
-            <p className={`status-badge ${vehicle.available ? 'available' : 'unavailable'}`}>
-              {vehicle.available ? <><CheckmarkCircle02Icon size={20} /> Available</> : <><CancelCircleIcon size={20} /> Not Available</>}
+            <p className={`status-badge ${vehicle.onService ? 'service' : (vehicle.available ? 'available' : 'unavailable')}`}>
+              {vehicle.onService ? (
+                <><Settings02Icon size={20} /> In Service</>
+              ) : vehicle.available ? (
+                <><CheckmarkCircle02Icon size={20} /> Available</>
+              ) : (
+                <><CancelCircleIcon size={20} /> Currently Rented</>
+              )}
             </p>
           </div>
-          <p className="detail-type">{vehicle.type} • {vehicle.year}</p>
-          <p className="detail-price">₹{vehicle.price} <span className="per-day">/day</span></p>
+          <div className="type-year">
+            <span>{vehicle.type}</span>
+            <span>•</span>
+            <span>{vehicle.manufacturingYear || vehicle.year}</span>
+          </div>
           
           <div className="info-section">
             <h3><Shield01Icon size={20} /> Vehicle Specifications</h3>
             <div className="specs-list">
+              <div className="spec-row">
+                <span className="spec-label">Vehicle Name</span>
+                <span className="spec-value">{vehicle.name}</span>
+              </div>
+              <div className="spec-row">
+                <span className="spec-label">Type</span>
+                <span className="spec-value">{vehicle.type}</span>
+              </div>
+              <div className="spec-row">
+                <span className="spec-label">Seats</span>
+                <span className="spec-value">{vehicle.seats} Seater</span>
+              </div>
+              <div className="spec-row">
+                <span className="spec-label">Transmission</span>
+                <span className="spec-value">{vehicle.transmission}</span>
+              </div>
               <div className="spec-row">
                 <span className="spec-label">Color</span>
                 <span className="spec-value">{vehicle.color || 'Not specified'}</span>
@@ -175,6 +192,10 @@ const VehicleDetail = () => {
                 <span className="spec-value">{vehicle.kilometers || 0} km</span>
               </div>
               <div className="spec-row">
+                <span className="spec-label">Fuel Type</span>
+                <span className="spec-value">{vehicle.fuelType || 'Petrol'}</span>
+              </div>
+              <div className="spec-row">
                 <span className="spec-label">Insurance</span>
                 <span className="spec-value">{vehicle.insurance || 'Comprehensive'}</span>
               </div>
@@ -182,19 +203,32 @@ const VehicleDetail = () => {
                 <span className="spec-label">Registration</span>
                 <span className="spec-value">{vehicle.registrationType || 'Individual'}</span>
               </div>
+              <div className="spec-row">
+                <span className="spec-label">Location</span>
+                <span className="spec-value">{vehicle.city}, {vehicle.state}</span>
+              </div>
             </div>
           </div>
 
-          {vehicle.available && (
-            <div className="booking-section">
-              <button onClick={handleBooking} className="btn-book-now">
+          <div className="price-booking">
+            <div className="price-detail">
+              <span className="amount">₹{vehicle.price}</span>
+              <span className="unit">/day</span>
+            </div>
+            {vehicle.available && !vehicle.onService && (
+              <button onClick={handleBooking} className="btn-book-large">
                 {user ? 'Book Now' : 'Sign In to Book'}
               </button>
-              {!user && (
-                <p className="auth-note">Please sign in to book this vehicle</p>
-              )}
-            </div>
-          )}
+            )}
+            {(vehicle.onService || !vehicle.available) && (
+              <button className="btn-book-large disabled" disabled>
+                {vehicle.onService ? 'Under Maintenance' : 'Already Rented'}
+              </button>
+            )}
+            {!user && vehicle.available && (
+              <p className="auth-note" style={{textAlign: 'center', marginTop: '10px', color: 'var(--text-secondary)'}}>Please sign in to book this vehicle</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

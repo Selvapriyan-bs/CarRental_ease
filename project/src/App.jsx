@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import VehicleDetail from './pages/VehicleDetail';
 import Payment from './pages/Payment';
 import Profile from './pages/Profile';
+import VendorAnalytics from './pages/VendorAnalytics';
 import './App.css';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/vehicle/:id" element={<VehicleDetail />} />
           <Route path="/payment/:id" element={<Payment />} />
+          <Route path="/analytics" element={<VendorAnalytics />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

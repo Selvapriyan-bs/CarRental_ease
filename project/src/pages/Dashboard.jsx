@@ -10,7 +10,7 @@ const Dashboard = () => {
   if (!user) return <Navigate to="/login" />;
 
   return (
-    <div>
+    <div className="dashboard-page-wrapper" style={{animation: 'fadeIn 0.5s ease-out'}}>
       {user.role === 'user' && <UserDashboard />}
       {user.role === 'vendor' && <VendorDashboard />}
       {user.role === 'admin' && <AdminDashboard />}

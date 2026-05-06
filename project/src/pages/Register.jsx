@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/api';
 import './Auth.css';
 
 const Register = () => {
@@ -22,19 +23,10 @@ const Register = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:5000/api/send-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setStep(2);
-      } else {
-        setError(data.message);
-      }
+      await authAPI.sendVerification(formData.email);
+      setStep(2);
     } catch (err) {
-      setError('Failed to send verification code');
+      setError(err.response?.data?.message || 'Failed to send verification code');
     }
     setLoading(false);
   };
@@ -43,19 +35,10 @@ const Register = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:5000/api/verify-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, code: verificationCode })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setStep(3);
-      } else {
-        setError(data.message);
-      }
+      await authAPI.verifyEmail(formData.email, verificationCode);
+      setStep(3);
     } catch (err) {
-      setError('Verification failed');
+      setError(err.response?.data?.message || 'Verification failed');
     }
     setLoading(false);
   };
@@ -65,20 +48,12 @@ const Register = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:5000/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const data = await response.json();
-      if (response.ok) {
-        login(data.user, data.token);
-        navigate('/dashboard');
-      } else {
-        setError(data.message);
-      }
+      const response = await authAPI.register(formData);
+      login(response.data.user);
+      localStorage.setItem('token', response.data.token);
+      navigate('/dashboard');
     } catch (err) {
-      setError('Registration failed');
+      setError(err.response?.data?.message || 'Registration failed');
     }
     setLoading(false);
   };
@@ -86,79 +61,128 @@ const Register = () => {
   return (
     <div className="auth-container">
       <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
-        <h2>Register</h2>
+        <h2>Create Account</h2>
+        <p className="auth-subtitle">Join us to experience premium rentals</p>
+        
         {error && <div className="error">{error}</div>}
         
         {step === 1 && (
           <>
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              required
-            />
-            <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
-              <option value="user">User</option>
-              <option value="vendor">Vendor</option>
-            </select>
-            {formData.role === 'vendor' && (
+            <div className="form-group">
               <input
                 type="text"
-                placeholder="GST Number"
-                value={formData.gstNumber}
-                onChange={(e) => setFormData({...formData, gstNumber: e.target.value})}
+                placeholder="Full Name"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
                 required
               />
+            </div>
+            <div className="form-group">
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <input
+                type="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <select 
+                value={formData.role} 
+                onChange={(e) => setFormData({...formData, role: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'white',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  appearance: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="user" style={{background: '#0a0a0a'}}>User</option>
+                <option value="vendor" style={{background: '#0a0a0a'}}>Vendor</option>
+              </select>
+            </div>
+            {formData.role === 'vendor' && (
+              <div className="form-group">
+                <input
+                  type="text"
+                  placeholder="GST Number"
+                  value={formData.gstNumber}
+                  onChange={(e) => setFormData({...formData, gstNumber: e.target.value})}
+                  required
+                />
+              </div>
             )}
             <button type="button" className="btn-primary" onClick={sendVerificationCode} disabled={loading}>
-              {loading ? 'Sending...' : 'Send Verification Code'}
+              {loading ? 'Sending OTP...' : 'Send Verification Code'}
             </button>
           </>
         )}
         
         {step === 2 && (
           <>
-            <p style={{textAlign: 'center', color: '#666'}}>Enter the 6-digit code sent to {formData.email}</p>
-            <input
-              type="text"
-              placeholder="Verification Code"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
-              maxLength="6"
-              required
-            />
+            <p className="auth-subtitle">Enter the 6-digit code sent to <br/><strong style={{color: 'white'}}>{formData.email}</strong></p>
+            <div className="form-group">
+              <input
+                type="text"
+                placeholder="Verification Code"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                maxLength="6"
+                required
+                style={{letterSpacing: '4px', textAlign: 'center', fontSize: '1.2rem', fontWeight: '700'}}
+              />
+            </div>
             <button type="button" className="btn-primary" onClick={verifyEmail} disabled={loading}>
               {loading ? 'Verifying...' : 'Verify Email'}
             </button>
-            <button type="button" onClick={() => setStep(1)} style={{marginTop: '10px'}}>Back</button>
+            <button 
+              type="button" 
+              onClick={() => setStep(1)} 
+              style={{
+                background: 'rgba(255,255,255,0.05)', 
+                color: 'white', 
+                border: '1px solid rgba(255,255,255,0.1)', 
+                padding: '12px', 
+                borderRadius: '8px', 
+                cursor: 'pointer',
+                fontWeight: '600',
+                transition: 'all 0.3s'
+              }}
+              onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+              onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
+            >
+              Back to Change Email
+            </button>
           </>
         )}
         
         {step === 3 && (
           <>
-            <p style={{textAlign: 'center', color: 'green'}}>✓ Email verified successfully!</p>
+            <p className="auth-subtitle" style={{color: '#10b981'}}>✓ Email verified successfully!</p>
             <button type="submit" className="btn-primary" onClick={handleRegister} disabled={loading}>
-              {loading ? 'Registering...' : 'Complete Registration'}
+              {loading ? 'Creating Account...' : 'Complete Registration'}
             </button>
           </>
         )}
         
-        <p>Already have an account? <Link to="/login">Login</Link></p>
+        <div className="auth-footer">
+          <p>Already have an account? <Link to="/login">Login here</Link></p>
+        </div>
       </form>
     </div>
   );

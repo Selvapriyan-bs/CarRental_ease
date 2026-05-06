@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Home01Icon, Login01Icon, UserAdd01Icon, DashboardSquare01Icon, Logout01Icon, UserIcon } from 'hugeicons-react';
+import { Home01Icon, Login01Icon, UserAdd01Icon, DashboardSquare01Icon, Logout01Icon, UserIcon, ChartLineData01Icon } from 'hugeicons-react';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -24,6 +24,9 @@ const Navbar = () => {
           {user ? (
             <>
               <li><Link to="/dashboard"><DashboardSquare01Icon size={20} /> Dashboard</Link></li>
+              {user.role === 'vendor' && (
+                <li><Link to="/analytics"><ChartLineData01Icon size={20} /> Analytics</Link></li>
+              )}
               <li><Link to="/profile"><UserIcon size={20} /> Profile</Link></li>
               <li><span className="user-name">{user.name}</span></li>
               <li><button onClick={handleLogout} className="btn-logout"><Logout01Icon size={20} /> Logout</button></li>

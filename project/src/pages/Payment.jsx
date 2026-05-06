@@ -196,7 +196,7 @@ const Payment = () => {
           <h3>Booking Details</h3>
           
           <div className="form-group">
-            <label><Calendar03Icon size={20} /> Start Date</label>
+            <label><Calendar03Icon size={20} /> Taking Date</label>
             <input
               type="date"
               value={bookingData.startDate}
@@ -207,7 +207,7 @@ const Payment = () => {
           </div>
 
           <div className="form-group">
-            <label><Calendar03Icon size={20} /> End Date</label>
+            <label><Calendar03Icon size={20} /> Return Date</label>
             <input
               type="date"
               value={bookingData.endDate}

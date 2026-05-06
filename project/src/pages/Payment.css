@@ -1,258 +1,254 @@
 .payment-container {
-  min-height: calc(100vh - 60px);
-  background: #f5f5f5;
-  padding: 2rem;
+  padding: 120px 24px;
+  min-height: calc(100vh - 80px);
+  background: var(--bg-dark);
+  position: relative;
+  overflow: hidden;
+}
+
+.payment-container::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at 100% 100%, rgba(79, 70, 229, 0.15) 0%, transparent 40%);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .payment-content {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 40px;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
 }
 
 .vehicle-summary {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  height: fit-content;
+  background: var(--glass-bg);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  position: sticky;
+  top: 100px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
 }
 
 .vehicle-summary img {
   width: 100%;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  aspect-ratio: 16/10;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 15px;
 }
 
-.vehicle-info h2 {
-  margin: 0 0 0.5rem 0;
-  color: #2c3e50;
+.vehicle-summary .vehicle-info {
+  padding: 32px;
 }
 
-.vehicle-info p {
-  margin: 0.25rem 0;
-  color: #666;
+.vehicle-summary h2 {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
 }
 
-.vehicle-info .price {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #3498db;
+.vehicle-summary p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.vehicle-summary .price {
+  font-size: 2rem;
+  font-weight: 800;
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .payment-form {
-  background: white;
-  border-radius: 8px;
-  padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background: var(--bg-card);
+  padding: 40px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
 .payment-form h3 {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-  color: #2c3e50;
-  border-bottom: 2px solid #3498db;
-  padding-bottom: 0.5rem;
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-  color: #2c3e50;
+  gap: 8px;
 }
 
 .form-group input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #e1e8ed;
-  border-radius: 8px;
+  padding: 16px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  color: white;
   font-size: 1rem;
-  transition: border-color 0.3s;
-  box-sizing: border-box;
+  transition: var(--transition-smooth);
 }
 
 .form-group input:focus {
+  border-color: rgba(79, 70, 229, 0.5);
+  background: rgba(0,0,0,0.6);
   outline: none;
-  border-color: #3498db;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
 }
 
 .booking-summary {
-  background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 8px;
-  margin: 1rem 0;
-  border-left: 4px solid #3498db;
+  background: rgba(79, 70, 229, 0.1);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(79, 70, 229, 0.2);
 }
 
 .booking-summary p {
-  margin: 0.5rem 0;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .booking-summary .total {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-.payment-info {
-  text-align: center;
-  margin: 1rem 0;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.payment-info p {
-  margin: 0.25rem 0;
-}
-
-.btn-pay {
-  width: 100%;
-  padding: 1rem;
-  background: linear-gradient(135deg, #3395ff, #1976d2);
+  font-size: 1.8rem;
   color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-pay:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-}
-
-.btn-pay:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+  margin-top: 8px;
+  font-weight: 800;
 }
 
 .payment-methods {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 16px;
 }
 
 .payment-option {
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
-  border: 2px solid #e1e8ed;
-  border-radius: 8px;
+  gap: 12px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: var(--transition-smooth);
   text-align: center;
 }
 
 .payment-option:hover {
-  border-color: #3498db;
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
 }
 
 .payment-option.active {
-  border-color: #3498db;
-  background: #e3f2fd;
-  color: #1976d2;
+  background: rgba(79, 70, 229, 0.1);
+  border-color: var(--primary);
+  color: white;
 }
 
-.payment-option span {
-  font-weight: 500;
-  font-size: 0.9rem;
+.payment-option svg {
+  color: var(--text-secondary);
+  transition: var(--transition-smooth);
+}
+.payment-option.active svg {
+  color: var(--primary);
 }
 
-.upi-section {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-}
-
-.upi-apps {
-  margin-top: 1rem;
-  text-align: center;
-}
-
-.upi-apps p {
-  margin-bottom: 0.5rem;
-  color: #666;
-  font-size: 0.9rem;
+.upi-section, .qr-section {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
 .upi-icons {
   display: flex;
-  justify-content: center;
-  gap: 1rem;
+  gap: 16px;
+  margin-top: 16px;
   flex-wrap: wrap;
 }
 
 .upi-icons span {
-  background: white;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  border: 1px solid #e1e8ed;
-  color: #666;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
-.qr-section {
-  background: #f8f9fa;
-  padding: 2rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
+.btn-pay {
+  background: var(--gradient-main);
+  color: white;
+  padding: 20px;
+  border-radius: var(--radius-full);
+  font-size: 1.2rem;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-bounce);
 }
 
-.qr-info {
-  text-align: center;
-  color: #666;
+.btn-pay:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 30px var(--primary-glow);
 }
 
-.qr-info svg {
-  color: #3498db;
-  margin-bottom: 1rem;
+.btn-pay:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
-.qr-info p {
-  margin: 0.5rem 0;
+.payment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.qr-note {
+.payment-info p {
   font-size: 0.85rem;
-  color: #999 !important;
-  font-style: italic;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-@media (max-width: 768px) {
-  .payment-methods {
+@media (max-width: 992px) {
+  .payment-content {
     grid-template-columns: 1fr;
   }
   
-  .upi-icons {
-    gap: 0.5rem;
+  .vehicle-summary {
+    position: static;
   }
-  
-  .upi-icons span {
-    font-size: 0.75rem;
-    padding: 0.4rem 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .payment-methods {
+    grid-template-columns: 1fr;
   }
 }

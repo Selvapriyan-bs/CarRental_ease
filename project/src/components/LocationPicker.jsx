@@ -23,13 +23,13 @@ function LocationMarker({ position, setPosition, setAddress, onLocationSelect })
   const fetchAddress = async (lat, lng) => {
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
       );
       const data = await response.json();
       if (data.address) {
         const addressData = {
           full: data.display_name,
-          city: data.address.city || data.address.town || data.address.village || '',
+          city: data.address.city || data.address.town || data.address.village || data.address.county || data.address.state_district || '',
           state: data.address.state || '',
         };
         setAddress(addressData);
@@ -64,7 +64,7 @@ const LocationPicker = ({ onLocationSelect, initialPosition }) => {
 
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1`
       );
       const data = await response.json();
       if (data && data[0]) {
@@ -72,10 +72,11 @@ const LocationPicker = ({ onLocationSelect, initialPosition }) => {
         const lng = parseFloat(data[0].lon);
         setPosition([lat, lng]);
         
+        const addr = data[0].address || {};
         const addressData = {
           full: data[0].display_name,
-          city: data[0].address?.city || data[0].address?.town || data[0].address?.village || '',
-          state: data[0].address?.state || '',
+          city: addr.city || addr.town || addr.village || addr.county || addr.state_district || '',
+          state: addr.state || '',
         };
         setAddress(addressData);
         

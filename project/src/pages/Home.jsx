@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { vehicleAPI, bookingAPI } from '../services/api';
-import { Search01Icon, FilterIcon, Car01Icon, DollarCircleIcon, Calendar03Icon, ChartLineData01Icon } from 'hugeicons-react';
+import { Search01Icon, Car01Icon, DollarCircleIcon, Calendar03Icon, ChartLineData01Icon, Location01Icon } from 'hugeicons-react';
 import { states, getCitiesByState } from '../data/indianLocations';
 import './Home.css';
 
@@ -16,6 +16,7 @@ const Home = () => {
   const [vehicles, setVehicles] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [managedVehicleId, setManagedVehicleId] = useState(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -25,6 +26,19 @@ const Home = () => {
       fetchBookings();
     }
   }, [user]);
+
+  const handleVehicleStatusChange = async (vehicleId, newStatus) => {
+    try {
+      await vehicleAPI.update(vehicleId, { 
+        available: newStatus === 'available',
+        onService: newStatus === 'service'
+      });
+      fetchVehicles();
+    } catch (error) {
+      console.error('Failed to update vehicle status:', error);
+      alert('Failed to update vehicle status');
+    }
+  };
 
   useEffect(() => {
     if (selectedState) {
@@ -64,11 +78,24 @@ const Home = () => {
     navigate(`/payment/${vehicleId}`);
   };
 
-  // Vendor analytics
+  // Vendor analytics - Synchronized with status fields
   const vendorVehicles = user && user.role === 'vendor' ? vehicles.filter(v => v.vendorId === user.id || (v.vendorId._id && v.vendorId._id === user.id)) : [];
   const vendorBookings = user && user.role === 'vendor' ? bookings.filter(b => vendorVehicles.some(v => v._id === b.vehicleId)) : [];
-  const rentedVehicles = vendorVehicles.filter(v => vendorBookings.some(b => b.vehicleId === v._id && b.status === 'approved'));
-  const availableVehicles = vendorVehicles.filter(v => !rentedVehicles.some(rv => rv._id === v._id));
+  
+  const availableVehicles = vendorVehicles.filter(v => v.available && !v.onService);
+  const onServiceVehicles = vendorVehicles.filter(v => v.onService);
+  const rentedVehicles = vendorVehicles.filter(v => !v.available && !v.onService);
+  
+  // Expected returns today
+  const today = new Date().toISOString().split('T')[0];
+  const expectedReturnsToday = vendorBookings.filter(b => {
+    if (b.status === 'approved' && b.endDate) {
+      const endDate = new Date(b.endDate).toISOString().split('T')[0];
+      return endDate === today;
+    }
+    return false;
+  });
+  
   const monthlyRevenue = vendorBookings.reduce((sum, b) => sum + (b.status === 'approved' ? b.total : 0), 0);
 
   const handleSaveLocation = () => {
@@ -103,110 +130,195 @@ const Home = () => {
   if (user && user.role === 'vendor') {
     return (
       <div className="home vendor-home">
-        <section className="hero">
-          <h1>Vendor Dashboard</h1>
-          <p>Manage your fleet and track performance</p>
+        <section className="hero-modern" style={{padding: '140px 24px 60px'}}>
+          <h1>Fleet Analytics</h1>
+          <p>Real-time performance overview of your rental business</p>
         </section>
 
         <div className="vendor-tabs">
           <button className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>Overview</button>
-          <button className={`tab ${activeTab === 'rented' ? 'active' : ''}`} onClick={() => setActiveTab('rented')}>Rented Vehicles</button>
-          <button className={`tab ${activeTab === 'available' ? 'active' : ''}`} onClick={() => setActiveTab('available')}>Available Vehicles</button>
-          <button className={`tab ${activeTab === 'revenue' ? 'active' : ''}`} onClick={() => setActiveTab('revenue')}>Revenue</button>
+          <button className={`tab ${activeTab === 'available' ? 'active' : ''}`} onClick={() => setActiveTab('available')}>Available</button>
+          <button className={`tab ${activeTab === 'rented' ? 'active' : ''}`} onClick={() => setActiveTab('rented')}>Rented</button>
+          <button className={`tab ${activeTab === 'service' ? 'active' : ''}`} onClick={() => setActiveTab('service')}>On Service</button>
+          <button className={`tab ${activeTab === 'returns' ? 'active' : ''}`} onClick={() => setActiveTab('returns')}>Returns</button>
         </div>
 
-        {activeTab === 'overview' && (
-          <div className="vendor-overview">
-            <div className="stats-grid">
-              <div className="stat-card">
-                <Car01Icon size={32} />
-                <h3>Total Vehicles</h3>
-                <p className="stat-number">{vendorVehicles.length}</p>
+        <div className="vendor-overview" style={{maxWidth: '1400px', margin: '0 auto', padding: '0 24px'}}>
+          {activeTab === 'overview' && (
+            <>
+              <div className="stats-grid" style={{marginBottom: '64px'}}>
+                <div className="stat-card" onClick={() => setActiveTab('available')} style={{cursor: 'pointer'}}>
+                  <Car01Icon size={40} />
+                  <h3>Available</h3>
+                  <p className="stat-number">{availableVehicles.length}</p>
+                  <span className="stat-label">Units Ready</span>
+                </div>
+                <div className="stat-card" onClick={() => setActiveTab('rented')} style={{cursor: 'pointer'}}>
+                  <ChartLineData01Icon size={40} />
+                  <h3>Currently Rented</h3>
+                  <p className="stat-number">{rentedVehicles.length}</p>
+                  <span className="stat-label">Active Bookings</span>
+                </div>
+                <div className="stat-card" onClick={() => setActiveTab('service')} style={{cursor: 'pointer'}}>
+                  <Calendar03Icon size={40} />
+                  <h3>Maintenance</h3>
+                  <p className="stat-number">{onServiceVehicles.length}</p>
+                  <span className="stat-label">On Service</span>
+                </div>
+                <div className="stat-card" onClick={() => setActiveTab('returns')} style={{cursor: 'pointer'}}>
+                  <DollarCircleIcon size={40} />
+                  <h3>Returns Today</h3>
+                  <p className="stat-number">{expectedReturnsToday.length}</p>
+                  <span className="stat-label">Due Today</span>
+                </div>
               </div>
-              <div className="stat-card">
-                <ChartLineData01Icon size={32} />
-                <h3>Currently Rented</h3>
-                <p className="stat-number">{rentedVehicles.length}</p>
-              </div>
-              <div className="stat-card">
-                <Calendar03Icon size={32} />
-                <h3>Available</h3>
-                <p className="stat-number">{availableVehicles.length}</p>
-              </div>
-              <div className="stat-card">
-                <DollarCircleIcon size={32} />
-                <h3>Monthly Revenue</h3>
-                <p className="stat-number">₹{monthlyRevenue}</p>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'rented' && (
-          <div className="vendor-section">
-            <h2>Currently Rented Vehicles ({rentedVehicles.length})</h2>
-            {rentedVehicles.length === 0 ? (
-              <p>No vehicles currently rented</p>
-            ) : (
-              <div className="vehicles-grid">
-                {rentedVehicles.map(vehicle => (
-                  <div key={vehicle._id} className="vehicle-card rented">
-                    <div className="vehicle-image-container">
-                      <img src={`http://localhost:5000${vehicle.images && vehicle.images[0] ? vehicle.images[0] : vehicle.image || '/uploads/default.jpg'}`} alt={vehicle.name} />
-                      <span className="status-badge rented">Rented</span>
+              <div className="vendor-section">
+                <div className="section-header">
+                  <h2>All Managed Vehicles ({vendorVehicles.length})</h2>
+                </div>
+                <div className="vehicles-grid">
+                  {vendorVehicles.map(vehicle => (
+                    <div key={vehicle._id} className="vehicle-card-modern">
+                      <div className="vehicle-image-container">
+                        <img src={`http://localhost:5000${vehicle.images?.[0] || '/uploads/default.jpg'}`} alt={vehicle.name} />
+                        <span className="status-badge" style={{
+                          background: vehicle.onService ? '#f59e0b' : (vehicle.available ? '#22c55e' : '#3b82f6')
+                        }}>
+                          {vehicle.onService ? 'SERVICE' : (vehicle.available ? 'AVAILABLE' : 'RENTED')}
+                        </span>
+                      </div>
+                      <div className="vehicle-info">
+                        <div className="vehicle-header">
+                          <span className="vehicle-type-badge">{vehicle.type}</span>
+                          <h3>{vehicle.name}</h3>
+                        </div>
+                        <div className="vehicle-specs-row">
+                          <span>{vehicle.seats} Seats</span>
+                          <span className="spec-divider">•</span>
+                          <span>{vehicle.transmission}</span>
+                          <span className="spec-divider">•</span>
+                          <span>{vehicle.year}</span>
+                        </div>
+                        <div className="vehicle-footer">
+                          <span className="vehicle-price">₹{vehicle.price}<span>/day</span></span>
+                          {managedVehicleId === vehicle._id ? (
+                            <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                              <select 
+                                className="status-dropdown"
+                                value={vehicle.onService ? 'service' : (vehicle.available ? 'available' : 'rented')}
+                                onChange={(e) => handleVehicleStatusChange(vehicle._id, e.target.value)}
+                                style={{
+                                  background: 'rgba(255,255,255,0.05)', 
+                                  color: 'white', 
+                                  border: '1px solid var(--glass-border)', 
+                                  padding: '6px 10px', 
+                                  borderRadius: '8px',
+                                  fontSize: '0.85rem'
+                                }}
+                              >
+                                <option value="available">Available</option>
+                                <option value="service">Service</option>
+                                <option value="rented">Rented</option>
+                              </select>
+                              <button onClick={() => navigate('/dashboard')} className="btn-details" style={{padding: '8px 12px'}}>Edit</button>
+                              <button onClick={() => setManagedVehicleId(null)} className="btn-details" style={{padding: '8px 12px', opacity: 0.7}}>✕</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setManagedVehicleId(vehicle._id)} className="btn-details">Manage</button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <h3>{vehicle.name}</h3>
-                    <p className="vehicle-type">{vehicle.type} • {vehicle.year}</p>
-                    <p className="vehicle-price">₹{vehicle.price}/day</p>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab !== 'overview' && (
+            <div className="vendor-section">
+              <div className="section-header">
+                <h2>
+                  {activeTab === 'available' && 'Available Fleet'}
+                  {activeTab === 'rented' && 'Active Rentals'}
+                  {activeTab === 'service' && 'Service Queue'}
+                  {activeTab === 'returns' && 'Expected Today'}
+                </h2>
+              </div>
+              
+              <div className="vehicles-grid">
+                {(activeTab === 'available' ? availableVehicles : 
+                  activeTab === 'rented' ? rentedVehicles : 
+                  activeTab === 'service' ? onServiceVehicles : 
+                  expectedReturnsToday.map(b => vendorVehicles.find(v => v._id === b.vehicleId)).filter(Boolean)
+                ).map(vehicle => (
+                  <div key={vehicle._id} className="vehicle-card-modern">
+                    <div className="vehicle-image-container">
+                      <img src={`http://localhost:5000${vehicle.images?.[0] || '/uploads/default.jpg'}`} alt={vehicle.name} />
+                      <span className="status-badge" style={{
+                        background: vehicle.onService ? '#f59e0b' : (vehicle.available ? '#22c55e' : '#3b82f6')
+                      }}>
+                        {vehicle.onService ? 'SERVICE' : (vehicle.available ? 'AVAILABLE' : 'RENTED')}
+                      </span>
+                    </div>
+                    <div className="vehicle-info">
+                      <div className="vehicle-header">
+                        <span className="vehicle-type-badge">{vehicle.type}</span>
+                        <h3>{vehicle.name}</h3>
+                      </div>
+                      <div className="vehicle-specs-row">
+                        <span>{vehicle.seats} Seats</span>
+                        <span className="spec-divider">•</span>
+                        <span>{vehicle.transmission}</span>
+                        <span className="spec-divider">•</span>
+                        <span>{vehicle.year}</span>
+                      </div>
+                      <div className="vehicle-footer">
+                        <span className="vehicle-price">₹{vehicle.price}<span>/day</span></span>
+                        {managedVehicleId === vehicle._id ? (
+                          <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                            <select 
+                              className="status-dropdown"
+                              value={vehicle.onService ? 'service' : (vehicle.available ? 'available' : 'rented')}
+                              onChange={(e) => handleVehicleStatusChange(vehicle._id, e.target.value)}
+                              style={{
+                                background: 'rgba(255,255,255,0.05)', 
+                                color: 'white', 
+                                border: '1px solid var(--glass-border)', 
+                                padding: '6px 10px', 
+                                borderRadius: '8px',
+                                fontSize: '0.85rem'
+                              }}
+                            >
+                              <option value="available">Available</option>
+                              <option value="service">Service</option>
+                              <option value="rented">Rented</option>
+                            </select>
+                            <button onClick={() => navigate('/dashboard')} className="btn-details" style={{padding: '8px 12px'}}>Edit</button>
+                            <button onClick={() => setManagedVehicleId(null)} className="btn-details" style={{padding: '8px 12px', opacity: 0.7}}>✕</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setManagedVehicleId(vehicle._id)} className="btn-details">Manage</button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'available' && (
-          <div className="vendor-section">
-            <h2>Available Vehicles ({availableVehicles.length})</h2>
-            {availableVehicles.length === 0 ? (
-              <p>No vehicles available</p>
-            ) : (
-              <div className="vehicles-grid">
-                {availableVehicles.map(vehicle => (
-                  <div key={vehicle._id} className="vehicle-card available">
-                    <div className="vehicle-image-container">
-                      <img src={`http://localhost:5000${vehicle.images && vehicle.images[0] ? vehicle.images[0] : vehicle.image || '/uploads/default.jpg'}`} alt={vehicle.name} />
-                      <span className="status-badge available">Available</span>
-                    </div>
-                    <h3>{vehicle.name}</h3>
-                    <p className="vehicle-type">{vehicle.type} • {vehicle.year}</p>
-                    <p className="vehicle-price">₹{vehicle.price}/day</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'revenue' && (
-          <div className="vendor-section">
-            <h2>Revenue Details</h2>
-            <div className="revenue-summary">
-              <div className="revenue-card">
-                <h3>Total Bookings</h3>
-                <p>{vendorBookings.length}</p>
-              </div>
-              <div className="revenue-card">
-                <h3>Approved Bookings</h3>
-                <p>{vendorBookings.filter(b => b.status === 'approved').length}</p>
-              </div>
-              <div className="revenue-card">
-                <h3>Monthly Revenue</h3>
-                <p>₹{monthlyRevenue}</p>
-              </div>
+              
+              {(activeTab === 'available' ? availableVehicles : 
+                activeTab === 'rented' ? rentedVehicles : 
+                activeTab === 'service' ? onServiceVehicles : 
+                expectedReturnsToday
+              ).length === 0 && (
+                <div style={{textAlign: 'center', padding: '100px 0'}}>
+                  <p style={{fontSize: '1.2rem', color: 'var(--text-secondary)'}}>No records found for this category.</p>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }
@@ -216,76 +328,156 @@ const Home = () => {
       {showLocationModal && (
         <div className="location-modal-overlay">
           <div className="location-modal">
-            <h2>Select Your Location</h2>
-            <p>Choose your city and state to find vehicles near you</p>
+            <div className="modal-header">
+              <h2>Select Your Location</h2>
+              <button className="close-modal" onClick={() => setShowLocationModal(false)}>✕</button>
+            </div>
+            <p className="modal-desc">Find premium vehicles in your city</p>
+            
             <div className="location-form">
-              <select value={selectedState} onChange={(e) => handleStateChange(e.target.value)} className="location-select">
-                <option value="">Select State</option>
-                {states.map(state => <option key={state} value={state}>{state}</option>)}
-              </select>
-              <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="location-select" disabled={!selectedState}>
-                <option value="">Select City</option>
-                {availableCities.map(city => <option key={city} value={city}>{city}</option>)}
-              </select>
-              <button onClick={handleSaveLocation} className="btn-save-location">Save Location</button>
+              <div className="input-group">
+                <label>State</label>
+                <select value={selectedState} onChange={(e) => handleStateChange(e.target.value)} className="location-select">
+                  <option value="">Select State</option>
+                  {states.map(state => <option key={state} value={state}>{state}</option>)}
+                </select>
+              </div>
+              <div className="input-group">
+                <label>City</label>
+                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="location-select" disabled={!selectedState}>
+                  <option value="">Select City</option>
+                  {availableCities.map(city => <option key={city} value={city}>{city}</option>)}
+                </select>
+              </div>
+              
+              <div className="popular-cities">
+                <label>Popular Cities</label>
+                <div className="city-chips">
+                  {['Mumbai', 'Delhi', 'Bangalore', 'Goa', 'Chennai', 'Hyderabad'].map(city => (
+                    <button 
+                      key={city} 
+                      className={`city-chip ${selectedCity === city ? 'active' : ''}`}
+                      onClick={() => {
+                        const cityState = states.find(s => getCitiesByState(s).includes(city));
+                        if(cityState) {
+                          setSelectedState(cityState);
+                          setSelectedCity(city);
+                        }
+                      }}
+                    >
+                      {city}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={handleSaveLocation} className="btn-save-location">
+                Explore Vehicles in {selectedCity || 'Your Area'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      <section className="hero">
-        <h1>Find Your Perfect Ride</h1>
-        <p>Book quality vehicles at affordable prices</p>
-        {selectedCity && selectedState && (
-          <div className="current-location">
-            <span>📍 {selectedCity}, {selectedState}</span>
-            <button onClick={handleChangeLocation} className="btn-change-location">Change Location</button>
+      <section className="hero-modern">
+        <div className="hero-content">
+          <h1>Your journey starts here</h1>
+          <p>Discover and book the perfect vehicle for your next adventure</p>
+          
+          <div className="search-card">
+            <div className="search-row">
+              <div className="search-field">
+                <div className="field-content">
+                  <label><Location01Icon size={16} /> State</label>
+                  <select value={selectedState} onChange={(e) => handleStateChange(e.target.value)}>
+                    <option value="">Select State</option>
+                    {states.map(state => <option key={state} value={state}>{state}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="search-field">
+                <div className="field-content">
+                  <label><ChartLineData01Icon size={16} /> City</label>
+                  <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} disabled={!selectedState}>
+                    <option value="">Select City</option>
+                    {availableCities.map(city => <option key={city} value={city}>{city}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="search-field">
+                <div className="field-content">
+                  <label><Car01Icon size={16} /> Type</label>
+                  <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+                    <option value="">All Types</option>
+                    {types.map(type => <option key={type} value={type}>{type}</option>)}
+                  </select>
+                </div>
+              </div>
+              <button className="search-btn">
+                <Search01Icon size={20} />
+                Search
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </section>
 
-      <section className="search-section">
-        <div className="search-box">
+      <section className="quick-search">
+        <div className="search-box-inline">
           <Search01Icon size={20} />
           <input
             type="text"
-            placeholder="Search vehicles..."
+            placeholder="Quick search by name or brand..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
           />
-        </div>
-        <div className="filter-box">
-          <FilterIcon size={20} />
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="filter-select">
-            <option value="">All Types</option>
-            {types.map(type => <option key={type} value={type}>{type}</option>)}
-          </select>
         </div>
       </section>
 
-      <section className="vehicles-grid">
-        {filteredVehicles.map(vehicle => (
-          <div key={vehicle._id} className="vehicle-card">
-            <div className="vehicle-image-container">
-              <img src={`http://localhost:5000${vehicle.images && vehicle.images[0] ? vehicle.images[0] : vehicle.image || '/uploads/default.jpg'}`} alt={vehicle.name} />
-              {vehicle.images && vehicle.images.length > 1 && (
-                <span className="image-count">+{vehicle.images.length - 1}</span>
-              )}
+      <section className="vehicles-section">
+        <div className="section-header">
+          <h2>Available Fleet</h2>
+          <p>{filteredVehicles.length} premium vehicles near you</p>
+        </div>
+        <div className="vehicles-grid">
+          {filteredVehicles.map(vehicle => (
+            <div key={vehicle._id} className="vehicle-card-modern">
+              <div className="vehicle-image-container">
+                <img src={`http://localhost:5000${vehicle.images && vehicle.images[0] ? vehicle.images[0] : vehicle.image || '/uploads/default.jpg'}`} alt={vehicle.name} />
+                {vehicle.images && vehicle.images.length > 1 && (
+                  <span className="image-count">{vehicle.images.length} Photos</span>
+                )}
+                <span className="status-badge" style={{background: 'var(--primary)'}}>Available</span>
+              </div>
+              <div className="vehicle-info">
+                <div className="vehicle-header">
+                  <span className="vehicle-type-badge">{vehicle.type}</span>
+                  <h3>{vehicle.name}</h3>
+                </div>
+                <div className="vehicle-specs-row">
+                  <span className="spec-item">{vehicle.seats} Seats</span>
+                  <span className="spec-divider">•</span>
+                  <span className="spec-item">{vehicle.transmission}</span>
+                  <span className="spec-divider">•</span>
+                  <span className="spec-item">{vehicle.year}</span>
+                </div>
+                <p className="vehicle-location">
+                  <Location01Icon size={16} /> 
+                  {vehicle.city}, {vehicle.state}
+                </p>
+                <div className="vehicle-footer">
+                  <span className="vehicle-price">₹{vehicle.price}<span>/day</span></span>
+                  <div className="card-actions">
+                    <Link to={`/vehicle/${vehicle._id}`} className="btn-details">Details</Link>
+                    {user && user.role === 'user' && (
+                      <button onClick={() => handleQuickBook(vehicle._id)} className="btn-book-modern">Book</button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-            <h3>{vehicle.name}</h3>
-            <p className="vehicle-type">{vehicle.type} • {vehicle.year}</p>
-            <p className="vehicle-details">{vehicle.seats} Seats • {vehicle.transmission}</p>
-            <p className="vehicle-location">📍 {vehicle.location}</p>
-            <p className="vehicle-price">₹{vehicle.price}/day</p>
-            <div className="card-buttons">
-              <Link to={`/vehicle/${vehicle._id}`} className="btn-view">View Details</Link>
-              {user && user.role === 'user' && (
-                <button onClick={() => handleQuickBook(vehicle._id)} className="btn-book">Book Now</button>
-              )}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
     </div>
   );

@@ -41,29 +41,41 @@ const Login = () => {
   return (
     <div className="auth-container">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h2>Login</h2>
+        <h2>Welcome Back</h2>
+        <p className="auth-subtitle">Sign in to your premium account</p>
+        
         {error && <div className="error">{error}</div>}
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        
+        <div className="form-group">
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        
         <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+          {loading ? 'Authenticating...' : 'Sign In'}
         </button>
-        <p style={{textAlign: 'center', marginTop: '10px'}}>
-          <Link to="/forgot-password">Forgot Password?</Link>
-        </p>
-        <p>Don't have an account? <Link to="/register">Register</Link></p>
+        
+        <div className="auth-footer">
+          <p>
+            <Link to="/forgot-password">Forgot Password?</Link>
+          </p>
+          <p>Don't have an account? <Link to="/register">Register</Link></p>
+        </div>
       </form>
     </div>
   );
